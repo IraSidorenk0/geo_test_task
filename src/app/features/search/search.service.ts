@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+﻿import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
+import { Place } from '../../core/models/place.model';
 import { CacheService } from '../../core/services/cache.service';
 import { tap } from 'rxjs/operators';
-import { Place } from '../../core/models/place.model';
+import { of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -25,5 +26,6 @@ export class SearchService {
     return this.apiService.searchPlaces(keyword, lat, lng).pipe(
       tap(places => this.cacheService.set(cacheKey, places))
     );
+    return this.apiService.searchPlaces(keyword, lat, lng);
   }
 }

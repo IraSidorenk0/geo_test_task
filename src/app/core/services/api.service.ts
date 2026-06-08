@@ -1,5 +1,5 @@
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+﻿import { Injectable } from '@angular/core';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, timeout, map, tap } from 'rxjs/operators';
 import { Place } from '../models/place.model';
@@ -10,44 +10,43 @@ import { CacheService } from './cache.service';
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = 'https://api.foursquare.com/v2/venues';
+  private apiUrl = '/serpapi';
 
-  constructor(private http: HttpClient, private cacheService: CacheService) {}
+  constructor(private http: HttpClient, private cacheService: CacheService) { }
 
   searchPlaces(keyword: string, lat: number, lng: number): Observable<Place[]> {
     const cacheKey = `${keyword}_${lat}_${lng}`;
-    const cachedData = this.cacheService.get(cacheKey);
+    const cached = this.cacheService.get(cacheKey);
 
-    if (cachedData) {
-      console.log('[ApiService] Cache hit for', cacheKey);
-      return of(cachedData);
+    if (cached) {
+      return of(cached);
     }
 
     const params = new HttpParams()
-      .set('client_id', environment.foursquareClientId)
-      .set('client_secret', environment.foursquareClientSecret)
-      .set('v', '20231010')
-      .set('query', keyword)
-      .set('ll', `${lat},${lng}`);
+      .set('engine', 'google_maps')
+      .set('type', 'search')
+      .set('q', keyword)
+      .set('ll', `@${lat},${lng},14z`)
+      .set('api_key', environment.serpApiKey);
 
-    console.log('[ApiService] Searching:', `${this.apiUrl}/search`, 'params:', params.toString());
+    console.log('[ApiService] Requesting:', this.apiUrl, params.toString());
 
-    return this.http.get<any>(`${this.apiUrl}/search`, { params }).pipe(
-      timeout(15000),
+    return this.http.get<any>(this.apiUrl, { params, headers: this.getHeaders() }).pipe(
+      timeout(30000),
       catchError(err => {
-        console.error('[ApiService] Search error', err);
-        return throwError(() => new Error(err.message || 'Search failed'));
+        console.error('API Error details:', err);
+        return throwError(() => err);
       }),
       map(response => {
-        console.log('[ApiService] Raw response keys:', Object.keys(response));
-        if (!response || !response.response || !response.response.venues) {
+        console.log('[ApiService] Response status:', response.search_metadata?.status);
+        if (!response || !Array.isArray(response.local_results)) {
           console.error('[ApiService] Unexpected response shape', response);
           return [];
         }
-        return this.transformResponse(response);
+        return this.transformResponse(response.local_results, lat, lng);
       }),
       tap(places => {
-        console.log('[ApiService] Transformed places count:', places.length);
+        console.log('[ApiService] Transformed places:', places.length);
         this.cacheService.set(cacheKey, places);
       })
     );
@@ -55,43 +54,66 @@ export class ApiService {
 
   getPlaceDetails(fsqId: string): Observable<Place> {
     const params = new HttpParams()
-      .set('client_id', environment.foursquareClientId)
-      .set('client_secret', environment.foursquareClientSecret)
-      .set('v', '20231010');
+      .set('engine', 'google_maps')
+      .set('place_id', fsqId)
+      .set('api_key', environment.serpApiKey);
 
-    return this.http.get<any>(`${this.apiUrl}/${fsqId}`, { params }).pipe(
-      timeout(15000),
+    return this.http.get<any>(this.apiUrl, { params, headers: this.getHeaders() }).pipe(
+      timeout(30000),
       catchError(err => {
         console.error('[ApiService] Detail error', err);
         return throwError(() => new Error(err.message || 'Failed to load details'));
       }),
-      map(response => this.transformDetail(response))
+      map(response => {
+        const placeData = response.place_results;
+        if (!placeData) {
+          console.error('[ApiService] No place_results in response', response);
+          return {
+            id: fsqId,
+            name: '',
+            address: '',
+            categories: [],
+            geolocation: { lat: 0, lng: 0 }
+          };
+        }
+        return this.transformDetail(placeData);
+      })
     );
   }
 
-  private transformResponse(response: any): Place[] {
-    return response.response.venues.map((item: any) => ({
-      id: item.id,
-      name: item.name,
-      address: item.location?.address || '',
+  private getHeaders(): HttpHeaders {
+    return new HttpHeaders().set('accept', 'application/json');
+  }
+
+  private transformResponse(response: any[], lat: number, lng: number): Place[] {
+    return (response || []).map((item: any) => ({
+      id: item.place_id || item.data_id || String(item.position),
+      name: item.title || '',
+      address: item.address || '',
       rating: item.rating,
-      categories: item.categories?.map((c: any) => c.name) || [],
-      photos: item.photos?.groups?.flatMap((g: any) => g.items?.map((p: any) => p.prefix + '300x300' + p.suffix) || []) || [],
-      reviews: item.tips?.groups?.flatMap((g: any) => g.items?.map((t: any) => t.text) || []) || [],
-      geolocation: { lat: item.location?.lat, lng: item.location?.lng }
+      categories: item.types || [],
+      photos: item.thumbnail ? [item.thumbnail] : [],
+      reviews: [],
+      geolocation: {
+        lat: item.gps_coordinates?.latitude ?? lat,
+        lng: item.gps_coordinates?.longitude ?? lng
+      }
     }));
   }
 
   private transformDetail(item: any): Place {
     return {
-      id: item.id,
-      name: item.name,
-      address: item.location?.address || '',
+      id: item.place_id || item.data_id || '',
+      name: item.title || '',
+      address: item.address || '',
       rating: item.rating,
-      categories: item.categories?.map((c: any) => c.name) || [],
-      photos: item.photos?.groups?.flatMap((g: any) => g.items?.map((p: any) => p.prefix + '300x300' + p.suffix) || []) || [],
-      reviews: item.tips?.groups?.flatMap((g: any) => g.items?.map((t: any) => t.text) || []) || [],
-      geolocation: { lat: item.location?.lat, lng: item.location?.lng }
+      categories: item.types || [],
+      photos: item.thumbnail ? [item.thumbnail] : [],
+      reviews: [],
+      geolocation: {
+        lat: item.gps_coordinates?.latitude ?? 0,
+        lng: item.gps_coordinates?.longitude ?? 0
+      }
     };
   }
 }

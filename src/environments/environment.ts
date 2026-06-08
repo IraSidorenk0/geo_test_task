@@ -1,15 +1,10 @@
 export const environment = {
   production: false,
-  foursquareApiKey: 'YOUR_FSQ_API_KEY',
-  foursquareClientId: 'IRJPKR4A0GC5HBGSKE3THVQABIUQEVAORDKVIL4EUHGA1VN3',
-  foursquareClientSecret: 'R1WZMVX42HVMXN03H4SNNEANQLVBIAOGNWD4ZOCZ5FH2TUVL',
-  foursquareBaseUrl: 'https://api.foursquare.com/v2/venues'
+  serpApiKey: 'ca1e9718076afc9d21c385be0268ff92daf77e057788b1f8d0f19cce1c8c8ac7',
 };
 
 export const environmentProd = {
   production: true,
-  foursquareApiKey: 'YOUR_FSQ_API_KEY',
-  foursquareClientId: 'IRJPKR4A0GC5HBGSKE3THVQABIUQEVAORDKVIL4EUHGA1VN3',
-  foursquareClientSecret: 'R1WZMVX42HVMXN03H4SNNEANQLVBIAOGNWD4ZOCZ5FH2TUVL',
-  foursquareBaseUrl: 'https://api.foursquare.com/v2/venues'
+  serpApiKey: 'ca1e9718076afc9d21c385be0268ff92daf77e057788b1f8d0f19cce1c8c8ac7',
 };
+

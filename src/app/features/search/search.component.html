@@ -20,7 +20,7 @@
             </div>
         </div>
         <div class="mt-4 flex justify-end">
-            <button type="submit" [disabled]="loading || !query || !lat || !lng"
+            <button type="submit" [disabled]="loading || query=='' || !lat || !lng"
                     class="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
             {{ loading ? 'Searching...' : 'Search' }}
             </button>
@@ -31,8 +31,8 @@
     {{ error }}
     </div>
 
-    <div *ngIf="results.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div *ngFor="let place of results" class=" shadow-md p-4 flex flex-col">
+    <div *ngIf="results.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div *ngFor="let place of results" class="shadow-md p-4 flex flex-col bg-gray-800 rounded">
             <h3 class="text-lg font-semibold text-white mb-2">{{ place.name }}</h3>
             <p class="text-gray-300 text-sm mb-1">{{ place.address }}</p>
             <div class="text-sm text-gray-400 mb-2">

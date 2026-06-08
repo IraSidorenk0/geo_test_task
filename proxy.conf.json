@@ -1,0 +1,11 @@
+{
+  "/serpapi": {
+    "target": "https://serpapi.com",
+    "secure": true,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/serpapi": "/search"
+    }
+  }
+}
+
